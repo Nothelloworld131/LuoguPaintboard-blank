@@ -18,7 +18,6 @@ let queueStrategy = 'horizontalPush'; // 默认策略
 let retryArray = []; // 重试队列
 // 在全局变量中添加一个 canvas 和 context 用于热力图
 let heatmapCanvas = document.getElementById('heatmapCanvas');
-let heatmapInfo =  document.getElementById('heatmapInfo');
 let heatmapCtx = heatmapCanvas.getContext('2d');
 let heatmapImageData = heatmapCtx.createImageData(1000, 600);
 // 在全局变量中添加一个数组来记录每个像素被更新的次数
@@ -30,6 +29,9 @@ let currentColorScheme = 'default'; // 默认配色方案
 let saturationMultiplier = 0.9;
 let maxCount = 0;
 let lintotalUpdates = 0;
+
+let isDrawing = false;
+let startX, startY, endX, endY;
 
 const colorSchemeSelect = document.getElementById('colorScheme');
 const audio = new Audio('empty_loop_for_js_performance.ogg');
@@ -586,11 +588,11 @@ function drawHeatmap() {
     }
     heatmapCtx.putImageData(heatmapImageData, 0, 0);
     linpixelUpdateCount = pixelUpdateCount;
-    // console.log(pixelUpdateCount);
-    // 重置 pixelUpdateCount 数组
     pixelUpdateCount = new Uint32Array(1000 * 600);
-}
 
+    // 调用绘制选框函数
+    drawSelectionBox();
+}
 function getMaxCount(pixelUpdateCount) {
     for (let y = 0; y < 600; y += cellSize) {
         for (let x = 0; x < 1000; x += cellSize) {
@@ -819,8 +821,6 @@ function calculateUnionArea(rectangles) {
     return totalArea;
 }
 
-// script.js
-
 heatmapCanvas.addEventListener('mousemove', (event) => {
     const rect = heatmapCanvas.getBoundingClientRect();
     const mouseX = event.clientX - rect.left;
@@ -848,23 +848,15 @@ heatmapCanvas.addEventListener('mousemove', (event) => {
             totalUpdates += linpixelUpdateCount[index];
         }
     }
-    const totalPixels = cellSize * cellSize;
     const averageIntensity = totalUpdates;
-    const percentage = maxCount === 0 ? 0 : (averageIntensity / lintotalUpdates * 100).toFixed(2);
+    const percentage = lintotalUpdates === 0 ? 0 : (averageIntensity / lintotalUpdates * 100).toFixed(2);
 
-    // console.log(`Mouse position: (${event.clientX}, ${event.clientY})`);
-    // console.log(`Cell position: (${clampedX}, ${clampedY})`);
-    // console.log(`LintotalUpdates: ${lintotalUpdates}`);
-    // console.log(`Total updates in cell: ${totalUpdates}`);
-    // console.log(`Total pixels in cell: ${totalPixels}`);
-    // console.log(`Average intensity: ${averageIntensity}`);
-    // console.log(`Max count: ${maxCount}`);
-    // console.log(`Percentage: ${percentage}%`);
     // 更新固定位置的文本元素
     const coordinatesDiv = document.getElementById('heatmapCoordinatesDisplay');
-    coordinatesDiv.textContent = `X: ${clampedX}, Y: ${clampedY}, 更改次数: ${totalUpdates}, 占比: ${percentage}%`;
+    if (!isDrawing) {
+        coordinatesDiv.textContent = `X: ${clampedX}, Y: ${clampedY}, 更改次数: ${totalUpdates}, 占比: ${percentage}%`;
+    }
 });
-
 function drawCoordinates(event) {
     const canvas = document.getElementById('canvas');
     const rect = canvas.getBoundingClientRect();
@@ -894,4 +886,67 @@ function drawCoordinates(event) {
 document.addEventListener('DOMContentLoaded', () => {
     const canvas = document.getElementById('canvas');
     canvas.addEventListener('mousemove', drawCoordinates);
+});
+
+function drawSelectionBox() {
+    if (!isDrawing) return;
+
+    heatmapCtx.clearRect(0, 0, heatmapCanvas.width, heatmapCanvas.height);
+    heatmapCtx.putImageData(heatmapImageData, 0, 0);
+
+    heatmapCtx.strokeStyle = '#ff0000';
+    heatmapCtx.lineWidth = 2;
+    heatmapCtx.strokeRect(startX, startY, endX - startX, endY - startY);
+}
+
+heatmapCanvas.addEventListener('mousedown', (event) => {
+    isDrawing = true;
+    const rect = heatmapCanvas.getBoundingClientRect();
+    startX = Math.floor((event.clientX - rect.left) / cellSize) * cellSize;
+    startY = Math.floor((event.clientY - rect.top) / cellSize) * cellSize;
+});
+
+heatmapCanvas.addEventListener('mousemove', (event) => {
+    if (!isDrawing) return;
+
+    const rect = heatmapCanvas.getBoundingClientRect();
+    endX = Math.floor((event.clientX - rect.left) / cellSize) * cellSize;
+    endY = Math.floor((event.clientY - rect.top) / cellSize) * cellSize;
+    drawSelectionBox();
+});
+
+heatmapCanvas.addEventListener('mouseup', (event) => {
+    if (!isDrawing) return;
+    isDrawing = false;
+
+    const rect = heatmapCanvas.getBoundingClientRect();
+    endX = Math.floor((event.clientX - rect.left) / cellSize) * cellSize;
+    endY = Math.floor((event.clientY - rect.top) / cellSize) * cellSize;
+
+    const minX = Math.min(startX, endX);
+    const minY = Math.min(startY, endY);
+    const maxX = Math.max(startX, endX);
+    const maxY = Math.max(startY, endY);
+
+    let totalUpdates = 0;
+    for (let y = Math.floor(minY); y <= Math.floor(maxY); y += cellSize) {
+        for (let x = Math.floor(minX); x <= Math.floor(maxX); x += cellSize) {
+            for (let cy = 0; cy < cellSize && y + cy < 600; cy++) {
+                for (let cx = 0; cx < cellSize && x + cx < 1000; cx++) {
+                    const index = ((y + cy) * 1000 + (x + cx));
+                    totalUpdates += linpixelUpdateCount[index];
+                }
+            }
+        }
+    }
+
+    const percentage = lintotalUpdates === 0 ? 0 : (totalUpdates / lintotalUpdates * 100).toFixed(2);
+
+    // 更新固定位置的文本元素
+    const selectionBoxInfoDiv = document.getElementById('selectionBoxInfo');
+    selectionBoxInfoDiv.textContent = `左上角: (${Math.floor(minX)}, ${Math.floor(minY)}), 右下角: (${Math.floor(maxX)}, ${Math.floor(maxY)}), 更改次数: ${totalUpdates}, 占比: ${percentage}%`;
+
+    // 确保鼠标移动时的坐标信息不被覆盖
+    const coordinatesDiv = document.getElementById('heatmapCoordinatesDisplay');
+    coordinatesDiv.textContent = '';
 });

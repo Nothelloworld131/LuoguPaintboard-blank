@@ -9,31 +9,39 @@
 ### 环境准备
 
 1. **安装 VSCode**：
-   - 访问 [VSCode 官方网站](https://code.visualstudio.com/) 并下载安装最新版本。
    
+   - 访问 [VSCode 官方网站](https://code.visualstudio.com/) 并下载安装最新版本。
+
 2. **安装 Live Server 插件**：
+   
    - 打开 VSCode，点击左侧活动栏中的扩展图标（四个方块组成的图标），搜索 "Live Server" 并安装。
 
 ### 项目设置
 
 1. **创建项目文件夹**：
+   
    - 在本地磁盘上创建一个新的文件夹，例如 `winterhuiban`，并将项目文件放入其中。
 
 2. **打开项目文件夹**：
+   
    - 使用 VSCode 打开刚刚创建的文件夹。
 
 3. **启动 Live Server**：
+   
    - 在 VSCode 中右键点击 `index.html` 文件，选择 "Open with Live Server"。
 
 ### 配置参数
 
 - **获取 Token**：
+  
   - 在页面中填写 UID 和 Paste 地址，点击 "获取 Token" 按钮。
-  
+
 - **配置参数**：
-  - 输入 uid:token 列表、uid:paste 列表、矩形参数等配置信息。
   
+  - 输入 uid:token 列表、uid:paste 列表、矩形参数等配置信息。
+
 - **操作控制**：
+  
   - 点击 "开始" 按钮启动绘图任务，点击 "暂停" 按钮停止任务。
 
 ## 依赖项
